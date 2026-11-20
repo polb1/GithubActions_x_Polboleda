@@ -1,0 +1,78 @@
+name: CI/CD (AppBancaria)
+
+# S'executa cada cop que fem push a la branca alfa
+on:
+  push:
+    branches:
+      - alfa
+
+permissions:
+  contents: write   # necessari per poder fer push a main
+
+jobs:
+  # 1r job: CI -> instal·lar i passar els tests
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, pdo_sqlite
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build assets (Vite)
+        run: |
+          npm ci
+          npm run build
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env
+          php artisan key:generate
+          touch database/database.sqlite
+          php artisan migrate --force
+
+      - name: Run tests
+        run: php artisan test
+
+  # 2n job: CD -> si els tests passen, fusiona alfa amb main (Wasmer desplega main)
+  merge-to-main:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "ci-bot@example.com"
+
+      - name: Merge alfa -> main i push
+        run: |
+          git fetch origin main
+          git fetch origin alfa
+          git checkout main
+          git merge --no-ff origin/alfa -m "chore: auto-merge alfa into main (CI)"
+          git push origin main
