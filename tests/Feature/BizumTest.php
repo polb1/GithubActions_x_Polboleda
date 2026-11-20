@@ -76,3 +76,11 @@ test('un client normal no pot entrar al panell d\'admin', function () {
 
     $this->actingAs($user)->get('/admin')->assertRedirect(route('noAdmin'));
 });
+
+test('els seeders es poden executar dues vegades sense duplicar', function () {
+    $this->seed();
+    $this->seed();
+
+    expect(App\Models\User::where('email', 'admin@admin.cat')->count())->toBe(1);
+    expect(App\Models\TipusCompte::count())->toBe(3);
+});
