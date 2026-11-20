@@ -76,3 +76,36 @@ jobs:
           git checkout main
           git merge --no-ff origin/alfa -m "chore: auto-merge alfa into main (CI)"
           git push origin main
+
+  # 3r job: executar les migracions a la BD MySQL de producció (Wasmer)
+  migrate-production:
+    needs: merge-to-main
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: production
+      APP_KEY: ${{ secrets.APP_KEY }}
+      DB_CONNECTION: mysql
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_DATABASE: ${{ secrets.DB_DATABASE }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, pdo_mysql
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist --no-dev --optimize-autoloader
+
+      - name: Migrate + seed producció
+        run: |
+          cp .env.example .env
+          php artisan migrate --force
+          php artisan db:seed --force
