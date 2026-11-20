@@ -15,7 +15,7 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         //Crem l'usuari admin
-        User::firstOrCreate(['email' => 'admin@admin.cat'], [
+        User::create([
             'name' => 'Admin',
             'email' => 'admin@admin.cat',
             'password' => Hash::make('admin1234'), //Per encriptar la contrasenya utilitzem el hash. Aixi l'encripta abans de pujarla a la BD
