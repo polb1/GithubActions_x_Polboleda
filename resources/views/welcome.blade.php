@@ -21,7 +21,7 @@
         }
 
         .bank-header {
-            background-color: #1a3c5e;
+            background-color: green;
             color: white;
             border-radius: 12px 12px 0 0;
             padding: 2rem;
